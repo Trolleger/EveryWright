@@ -1,14 +1,13 @@
 // Cloudflare Pages Function: receives the free demo request from the website
-// and emails it to hello@everywright.com using Cloudflare Email Service.
+// and passes it to the private mailer Worker (mailer/), which emails hello@everywright.com.
 //
 // Setup needed in Cloudflare (see docs/deploy.md):
 //   - Email Service onboarding for everywright.com
-//   - A "Send email" binding named EMAIL on this Pages project
+//   - Mailer Worker deployed
+//   - A "Service binding" named MAILER on this Pages project, pointing at the mailer Worker
 //
 // Available at: POST /api/demo-request
 
-const TO_ADDRESS = 'hello@everywright.com';
-const FROM_ADDRESS = 'hello@everywright.com';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Keep a value to a sensible length and strip line breaks (stops header tricks).
@@ -51,8 +50,8 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'Please fill in your name, business name and a valid email.' }, 400);
   }
 
-  if (!env.EMAIL) {
-    console.error('demo-request: EMAIL binding is missing. Add a Send email binding named EMAIL.');
+  if (!env.MAILER) {
+    console.error('demo-request: MAILER service binding is missing. Add it in Pages settings.');
     return json({ error: 'Sending is not set up yet.' }, 500);
   }
 
@@ -70,15 +69,21 @@ export async function onRequestPost({ request, env }) {
   ].join('\n');
 
   try {
-    await env.EMAIL.send({
-      to: TO_ADDRESS,
-      from: FROM_ADDRESS,
-      replyTo: data.email,
-      subject: `Free demo request: ${data.businessName}`,
-      text,
+    // Hand the message to the private mailer Worker (service binding named MAILER).
+    const response = await env.MAILER.fetch('https://mailer/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subject: `Free demo request: ${data.businessName}`,
+        text,
+        replyTo: data.email,
+      }),
     });
+    if (!response.ok) {
+      throw new Error(`mailer responded ${response.status}`);
+    }
   } catch (error) {
-    console.error('demo-request: send failed', error?.code, error?.message);
+    console.error('demo-request: send failed', error?.message);
     return json({ error: 'We could not send your message. Please try again.' }, 500);
   }
 
