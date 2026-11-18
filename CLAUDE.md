@@ -38,7 +38,7 @@ A fast, modern, mobile-first, one-page marketing site that gets small-business o
 ## The contact form
 
 The form collects: name, business name, email, phone (optional), current website (optional), and "What do you need?".
-Decided: the owner chose a **Cloudflare Pages Function**. The form posts to `/api/demo-request`, implemented in `site/functions/api/demo-request.js`. That function passes the request through a Pages service binding named `MAILER` to a private Worker in `mailer/`, which sends it with a Cloudflare "Send email" binding named `EMAIL`. Pages Functions can't use the email binding directly. The browser side is `site/src/submitDemoRequest.js`. The form has a hidden honeypot field (`company_website`) for spam. Setup steps are in `docs/deploy.md`.
+Decided: the owner chose a **Cloudflare Pages Function**. The form posts to `/api/demo-request`, implemented in `site/functions/api/demo-request.js`. That function sends the email through Resend's API, using a Pages secret named `RESEND_API_KEY`. We use Resend because Cloudflare Email Sending needs the paid Workers plan, and Pages Functions can't use the email binding anyway. The browser side is `site/src/submitDemoRequest.js`. The form has a hidden honeypot field (`company_website`) for spam. Setup steps are in `docs/deploy.md`.
 
 ## Deploying
 

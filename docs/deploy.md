@@ -35,28 +35,22 @@ Set up a redirect rule on everywright.ca so any visit goes to https://everywrigh
 
 ## 5. Make the contact form send emails
 
-The form sends requests through a Cloudflare Pages Function (`site/functions/api/demo-request.js`). That function hands each request to a private mailer Worker (`mailer/`), which sends it to hello@everywright.com. Cloudflare's menus change, so check their current docs if a name below doesn't match.
+The form sends requests through a Cloudflare Pages Function (`site/functions/api/demo-request.js`). The function emails each request to hello@everywright.com through Resend (https://resend.com, free plan: 3,000 emails a month, 100 a day). Cloudflare's own Email Sending needs the paid Workers plan, so we don't use it.
 
-**5a. Onboard the sending domain**
-1. In the Cloudflare dashboard, open Email Service and choose Email Sending, then "Onboard Domain". Pick everywright.com and follow the steps. Cloudflare adds the DNS records. This can take 5 to 15 minutes, and up to 24 hours.
-2. Until the domain is onboarded, Cloudflare only sends to addresses you have verified. Verify hello@everywright.com if the steps ask you to.
+**5a. Verify everywright.com in Resend** (done on 2026-11-18)
+The Resend account uses everywrighthq@gmail.com. everywright.com was added under Domains, and "Auto configure" wrote the DNS records to Cloudflare. Verification can take a few hours. The domain's status on Resend's Domains page should say Verified.
 
-**5b. Deploy the mailer Worker** (run in a terminal, in the `mailer/` folder)
-```bash
-npm install
-npx wrangler login
-npx wrangler deploy
-```
-`wrangler login` opens a browser window to sign in to your Cloudflare account. The deploy creates a Worker named `everywright-mailer`, with no public web address.
+**5b. Create an API key**
+In Resend, open API keys and create a key with sending access. Copy it. Don't paste it anywhere except Cloudflare.
 
-**5c. Connect the Pages site to the mailer**
-1. Open the `everywright` Pages project, then Settings > Bindings. Add a **Service binding**, set the variable name to exactly `MAILER`, and choose the `everywright-mailer` Worker. Save.
-2. Redeploy the site (push a change, or re-run the deploy). Bindings only apply after a new deploy.
+**5c. Add the key to the Pages project**
+1. Open the `everywright` Pages project, then Settings > Environment variables. Add a variable named exactly `RESEND_API_KEY`, paste the key, and mark it as a secret (encrypted). Save.
+2. Redeploy the site. Variables only apply after a new deploy.
 
 **5d. Test it**
 Fill in the form on your `.pages.dev` preview and check that the message arrives at hello@everywright.com.
 
-If the form shows "Sending is not set up yet", step 5c is missing. If it shows "We could not send your message", check the mailer's logs under the everywright-mailer Worker in the dashboard.
+If the form shows "Sending is not set up yet", step 5c is missing. If it shows "We could not send your message", check Resend's Logs page. An unverified domain is the most likely cause.
 
 ## Checklist before telling anyone about the site
 

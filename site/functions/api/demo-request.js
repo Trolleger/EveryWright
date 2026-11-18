@@ -1,13 +1,14 @@
 // Cloudflare Pages Function: receives the free demo request from the website
-// and passes it to the private mailer Worker (mailer/), which emails hello@everywright.com.
+// and emails it to hello@everywright.com through Resend (https://resend.com).
 //
-// Setup needed in Cloudflare (see docs/deploy.md):
-//   - Email Service onboarding for everywright.com
-//   - Mailer Worker deployed
-//   - A "Service binding" named MAILER on this Pages project, pointing at the mailer Worker
+// Setup needed (see docs/deploy.md section 5):
+//   - everywright.com verified as a sending domain in Resend
+//   - A secret named RESEND_API_KEY on the Pages project
 //
 // Available at: POST /api/demo-request
 
+const TO_ADDRESS = 'hello@everywright.com';
+const FROM_ADDRESS = 'Everywright website <hello@everywright.com>';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Keep a value to a sensible length and strip line breaks (stops header tricks).
@@ -50,8 +51,8 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'Please fill in your name, business name and a valid email.' }, 400);
   }
 
-  if (!env.MAILER) {
-    console.error('demo-request: MAILER service binding is missing. Add it in Pages settings.');
+  if (!env.RESEND_API_KEY) {
+    console.error('demo-request: RESEND_API_KEY secret is missing. Add it in Pages settings.');
     return json({ error: 'Sending is not set up yet.' }, 500);
   }
 
@@ -69,18 +70,23 @@ export async function onRequestPost({ request, env }) {
   ].join('\n');
 
   try {
-    // Hand the message to the private mailer Worker (service binding named MAILER).
-    const response = await env.MAILER.fetch('https://mailer/send', {
+    // Send through Resend (https://resend.com), using the RESEND_API_KEY secret.
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
+        from: FROM_ADDRESS,
+        to: [TO_ADDRESS],
+        reply_to: data.email,
         subject: `Free demo request: ${data.businessName}`,
         text,
-        replyTo: data.email,
       }),
     });
     if (!response.ok) {
-      throw new Error(`mailer responded ${response.status}`);
+      throw new Error(`Resend responded ${response.status}`);
     }
   } catch (error) {
     console.error('demo-request: send failed', error?.message);
