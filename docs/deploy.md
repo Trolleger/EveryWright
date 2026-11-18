@@ -59,7 +59,7 @@ The form on the site posts to `/api/demo-request`. That Pages Function checks th
 Setup:
 - Resend account: signed in with everywrighthq@gmail.com.
 - Sending domain: everywright.com, verified. "Auto configure" added the Resend DNS records (`resend._domainkey`, `send`, `rsend`, `_dmarc`).
-- API key: named `everywright-site` in Resend, saved in the Pages project as the secret `RESEND_API_KEY` (Settings, Environment variables).
+- API key: named `everywright-site-send` in Resend, with sending access only, saved in the Pages project as the secret `RESEND_API_KEY` (Settings, Environment variables). The old full-access key was deleted on 2026-11-17.
 - The form has a hidden spam-trap field (`company_website`). Submissions that fill it in are quietly ignored.
 
 If the form says "Sending is not set up yet", the `RESEND_API_KEY` secret is missing, or the site wasn't redeployed after adding it.
@@ -67,7 +67,7 @@ If it says "We could not send your message", check Resend's Logs and Emails page
 
 If Resend marks hello@ as bounced, it adds the address to its Suppressions list and blocks future sends to it. That happened once during setup. Fix it in Resend under Emails, then Suppressions, then remove the address.
 
-To swap the API key: create a new key in Resend, replace `RESEND_API_KEY` in Cloudflare, redeploy, then delete the old key in Resend. A key with sending-only access is safer than full access.
+To swap the API key: create a new key in Resend with sending access, replace `RESEND_API_KEY` in Cloudflare, then redeploy (Deployments, open the latest one, Manage deployment, Retry deployment). Send a test through the form, check the new key shows as used in Resend, then delete the old key.
 
 ## Launch checklist
 
