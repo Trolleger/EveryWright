@@ -1,61 +1,78 @@
-# Everywright: putting the site online
+# Everywright: how the site is hosted
 
-Both domains (everywright.com and everywright.ca) are registered at Cloudflare.
-Cloudflare's menus change from time to time, so check Cloudflare's current docs if a step below doesn't match what you see.
+This is how everywright.com is set up today (as of 2026-11-17) and how to change it.
+Everything runs on Cloudflare (account: everywrighthq@gmail.com), plus Resend for the contact form email.
+Cloudflare's menus change from time to time, so check Cloudflare's current docs if a step doesn't match what you see.
 
-## 1. Put the site on Cloudflare Pages
+## At a glance
 
-The site is built with React, so Cloudflare needs to run a build step. Connect the project to a GitHub repository. Do not upload the `dist/` folder by hand: that folder doesn't include the contact form function, so the form would stop working.
+| Piece | Where it lives | Status |
+| --- | --- | --- |
+| Website | Cloudflare Pages project `everywright`, built from GitHub `Trolleger/EveryWright`, branch `master` | Live at https://everywright.com |
+| www.everywright.com | Redirect rule on everywright.com (www to root) | 301 to https://everywright.com |
+| everywright.ca and www.everywright.ca | Redirect rule on everywright.ca | 301 to https://everywright.com |
+| everywright.pages.dev | Bulk Redirect `pages_dev_to_everywright` | 301 to https://everywright.com |
+| Contact form | Pages Function `site/functions/api/demo-request.js`, sends with Resend | Working, tested end to end |
+| hello@everywright.com | Cloudflare Email Routing | Forwards to everywrighthq@gmail.com |
 
-1. Put this folder (`everywright-site`) in a GitHub repository.
-2. In the Cloudflare dashboard, go to Workers & Pages, create a new Pages project, and connect it to that repository.
-3. Use these build settings:
-   - Framework preset: Vite (or None)
-   - Root directory: `site`
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-4. Cloudflare gives you a preview address ending in `.pages.dev`. Check the site there on a phone and a computer.
+## 1. The website (Cloudflare Pages)
 
-Every change you push then builds and goes live automatically.
+The site is a React app in `site/`. Cloudflare builds it from GitHub every time something is pushed to `master`.
 
-## 2. Connect everywright.com
+Pages project `everywright`, build settings:
+- Production branch: `master`
+- Root directory: `site`
+- Build command: `npm run build`
+- Build directory: `dist`
 
-1. In the Pages project, open Custom domains and add `everywright.com`, then `www.everywright.com`.
-2. Cloudflare sets up the DNS and the SSL certificate (the padlock) for you.
+To publish a change: commit it and run `git push origin master` from the `everywright-site` folder. Cloudflare builds it, and it's live in a minute or two. Other branches get their own preview links on `<something>.everywright.pages.dev`.
 
-## 3. Send everywright.ca to everywright.com
+Don't upload the `dist/` folder by hand. It doesn't include the contact form function, so the form would break.
 
-Set up a redirect rule on everywright.ca so any visit goes to https://everywright.com (a permanent 301 redirect).
+The repository also has a `main` branch from the first push. It's out of date and Cloudflare ignores it. Keep working on `master`.
 
-## 4. Business email: hello@everywright.com
+## 2. Domains and redirects
 
-1. On everywright.com in Cloudflare, turn on Email Routing.
-2. Create the address `hello@everywright.com` and forward it to the business Gmail (everywrighthq@gmail.com).
-3. To also send email from hello@, set up "Send mail as" in Gmail later.
+**everywright.com and www.everywright.com**
+Both are added under the Pages project's Custom domains. Cloudflare created the DNS records (CNAMEs to `everywright.pages.dev`) and the SSL certificates.
 
-## 5. Make the contact form send emails
+A redirect rule on the everywright.com zone ("Redirect from WWW to root") sends www.everywright.com to https://everywright.com, so there's one main address.
 
-The form sends requests through a Cloudflare Pages Function (`site/functions/api/demo-request.js`). The function emails each request to hello@everywright.com through Resend (https://resend.com, free plan: 3,000 emails a month, 100 a day). Cloudflare's own Email Sending needs the paid Workers plan, so we don't use it.
+**everywright.ca**
+The .ca zone has two placeholder DNS records, `everywright.ca` and `www.everywright.ca`, both type A, `192.0.2.1`, proxied. They exist only so Cloudflare can catch the traffic. A redirect rule ("Send everywright.ca to everywright.com") sends every request to https://everywright.com as a 301 and keeps query strings.
 
-**5a. Verify everywright.com in Resend** (done on 2026-11-18)
-The Resend account uses everywrighthq@gmail.com. everywright.com was added under Domains, and "Auto configure" wrote the DNS records to Cloudflare. Verification can take a few hours. The domain's status on Resend's Domains page should say Verified.
+**everywright.pages.dev**
+Every Pages project keeps a `.pages.dev` address, and it can't be deleted. A Bulk Redirect (account level: Bulk Redirects, list `pages_dev_to_everywright`, rule "Redirect pages.dev to everywright.com") sends it to https://everywright.com. "Include subdomains" is off, so preview links still work.
 
-**5b. Create an API key**
-In Resend, open API keys and create a key with sending access. Copy it. Don't paste it anywhere except Cloudflare.
+## 3. Business email: hello@everywright.com
 
-**5c. Add the key to the Pages project**
-1. Open the `everywright` Pages project, then Settings > Environment variables. Add a variable named exactly `RESEND_API_KEY`, paste the key, and mark it as a secret (encrypted). Save.
-2. Redeploy the site. Variables only apply after a new deploy.
+Cloudflare Email Routing is on for everywright.com. One rule forwards hello@everywright.com to everywrighthq@gmail.com. Other addresses at the domain are dropped (the catch-all is set to Drop).
 
-**5d. Test it**
-Fill in the form on your `.pages.dev` preview and check that the message arrives at hello@everywright.com.
+To add another address, for example sales@: Email Routing, then Routing rules, then Create routing rule.
 
-If the form shows "Sending is not set up yet", step 5c is missing. If it shows "We could not send your message", check Resend's Logs page. An unverified domain is the most likely cause.
+To send email *from* hello@, set up "Send mail as" in Gmail. That isn't done yet.
 
-## Checklist before telling anyone about the site
+## 4. The contact form
 
-- [ ] Looks right on a phone
-- [ ] Every button and link works
-- [ ] The form sends and the message arrives (step 5 above)
-- [ ] everywright.ca and www.everywright.com both land on https://everywright.com
-- [ ] No placeholder text or made-up claims left
+The form on the site posts to `/api/demo-request`. That Pages Function checks the fields and emails the request to hello@everywright.com through Resend (https://resend.com, free plan: 3,000 emails a month, 100 a day). We don't use Cloudflare's own Email Sending because it needs the paid Workers plan.
+
+Setup:
+- Resend account: signed in with everywrighthq@gmail.com.
+- Sending domain: everywright.com, verified. "Auto configure" added the Resend DNS records (`resend._domainkey`, `send`, `rsend`, `_dmarc`).
+- API key: named `everywright-site` in Resend, saved in the Pages project as the secret `RESEND_API_KEY` (Settings, Environment variables).
+- The form has a hidden spam-trap field (`company_website`). Submissions that fill it in are quietly ignored.
+
+If the form says "Sending is not set up yet", the `RESEND_API_KEY` secret is missing, or the site wasn't redeployed after adding it.
+If it says "We could not send your message", check Resend's Logs and Emails pages.
+
+If Resend marks hello@ as bounced, it adds the address to its Suppressions list and blocks future sends to it. That happened once during setup. Fix it in Resend under Emails, then Suppressions, then remove the address.
+
+To swap the API key: create a new key in Resend, replace `RESEND_API_KEY` in Cloudflare, redeploy, then delete the old key in Resend. A key with sending-only access is safer than full access.
+
+## Launch checklist
+
+- [x] Looks right on a phone (checked 2026-11-17 at 375px wide)
+- [x] Every button and link works
+- [x] The form sends and the message arrives
+- [x] everywright.ca, www.everywright.ca, www.everywright.com and everywright.pages.dev all land on https://everywright.com
+- [x] No placeholder text or made-up claims left (the "Our work" section is an honest "coming soon")

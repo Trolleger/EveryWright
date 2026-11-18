@@ -42,7 +42,9 @@ Decided: the owner chose a **Cloudflare Pages Function**. The form posts to `/ap
 
 ## Deploying
 
-See `docs/deploy.md`. The site deploys to Cloudflare Pages. Its Root directory is `site`, its build command is `npm run build`, and its output directory is `dist`. Domains are already registered on Cloudflare.
+See `docs/deploy.md`. The site is live at https://everywright.com on Cloudflare Pages (project `everywright`), built from GitHub `Trolleger/EveryWright`, production branch `master`. Root directory `site`, build command `npm run build`, build directory `dist`. A push to `master` publishes the site. www, everywright.ca and everywright.pages.dev all redirect to https://everywright.com.
+
+Pushing from Claude Code's sandbox fails because it has no GitHub login, so the user pushes from their own terminal.
 
 ## Working with the user
 
